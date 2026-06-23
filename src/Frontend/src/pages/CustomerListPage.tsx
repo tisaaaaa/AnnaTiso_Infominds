@@ -1,4 +1,5 @@
 import {
+  Button,
   Paper,
   Table,
   TableBody,
@@ -44,6 +45,34 @@ export default function CustomerListPage() {
     fetchCustomers(searchText);
   }, [searchText]);
 
+  const exportXml = () => {
+    const xmlRows = list.map((row) => `
+    <Customer>
+      <Id>${row.id}</Id>
+      <Name>${row.name}</Name>
+      <Address>${row.address}</Address>
+      <Email>${row.email}</Email>
+      <Phone>${row.phone}</Phone>
+      <Iban>${row.iban}</Iban>
+      <Category>
+        <Code>${row.category?.code ?? ""}</Code>
+        <Description>${row.category?.description ?? ""}</Description>
+      </Category>
+    </Customer>`).join("");
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Customers>${xmlRows}
+</Customers>`;
+
+    const blob = new Blob([xml], { type: "application/xml" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "customers.xml";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       <Typography variant="h4" sx={{ textAlign: "center", mt: 4, mb: 4 }}>
@@ -58,6 +87,15 @@ export default function CustomerListPage() {
         value={searchText}
         onChange={(e) => setSearchText(e.target.value)}
       />
+
+      <Button
+        variant="contained"
+        color="primary"
+        sx={{ mb: 3 }}
+        onClick={exportXml}
+      >
+        Esporta XML
+      </Button>
 
       <TableContainer component={Paper}>
         <Table sx={{ minWidth: 650 }} aria-label="customers table">
