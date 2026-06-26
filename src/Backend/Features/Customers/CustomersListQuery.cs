@@ -28,11 +28,13 @@ internal class CustomersListQueryHandler(BackendContext context) : IRequestHandl
 
     public async Task<List<CustomersListQueryResponse>> Handle(CustomersListQuery request, CancellationToken cancellationToken)
     {
-        var query = context.Customers.AsQueryable();
+        var query = context.Customers
+            .Include(q => q.CustomerCategory)
+            .AsQueryable();
 
         if (!string.IsNullOrEmpty(request.SearchText))
             query = query.Where(q => q.Name.ToLower().Contains(request.SearchText.ToLower()) ||
-                                     q.Email.ToLower().Contains(request.SearchText.ToLower()));
+                                    q.Email.ToLower().Contains(request.SearchText.ToLower()));
 
         var data = await query.OrderBy(q => q.Name).ToListAsync(cancellationToken);
 
@@ -50,14 +52,11 @@ internal class CustomersListQueryHandler(BackendContext context) : IRequestHandl
                 Iban = item.Iban,
             };
 
-            var category = await context.CustomerCategories
-                .SingleOrDefaultAsync(q => q.Id == item.CustomerCategoryId, cancellationToken);
-
-            if (category is not null)
+            if (item.CustomerCategory is not null)
                 resultItem.Category = new CustomersListQueryResponseCategory
                 {
-                    Code = category.Code,
-                    Description = category.Description
+                    Code = item.CustomerCategory.Code,
+                    Description = item.CustomerCategory.Description
                 };
 
             result.Add(resultItem);
