@@ -2,7 +2,6 @@ import {
   Button,
   Chip,
   Paper,
-  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -16,6 +15,7 @@ import {
   Box,
 } from "@mui/material";
 import { useEffect, useState } from "react";
+import TableSkeleton from "../components/TableSkeleton";
 
 interface CustomerListItem {
   id: number;
@@ -132,15 +132,7 @@ export default function CustomerListPage() {
           </TableHead>
           <TableBody>
             {loading
-              ? Array.from({ length: 8 }).map((_, index) => (
-                  <TableRow key={index}>
-                    {Array.from({ length: 6 }).map((_, colIndex) => (
-                      <TableCell key={colIndex}>
-                        <Skeleton variant="text" animation="wave" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
+              ? <TableSkeleton columns={6} />
               : list.length === 0
               ? (
                   <TableRow>
