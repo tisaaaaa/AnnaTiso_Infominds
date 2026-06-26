@@ -1,6 +1,8 @@
 import {
   Button,
+  Chip,
   Paper,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -11,6 +13,7 @@ import {
   styled,
   tableCellClasses,
   TextField,
+  Box,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 
@@ -30,15 +33,20 @@ interface CustomerListItem {
 export default function CustomerListPage() {
   const [list, setList] = useState<CustomerListItem[]>([]);
   const [searchText, setSearchText] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const fetchCustomers = (search: string) => {
+    setLoading(true);
     const url = search
       ? `/api/customer/list?SearchText=${encodeURIComponent(search)}`
       : `/api/customer/list`;
 
     fetch(url)
       .then((response) => response.json())
-      .then((data) => setList(data as CustomerListItem[]));
+      .then((data) => {
+        setList(data as CustomerListItem[]);
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -46,7 +54,9 @@ export default function CustomerListPage() {
   }, [searchText]);
 
   const exportXml = () => {
-    const xmlRows = list.map((row) => `
+    const xmlRows = list
+      .map(
+        (row) => `
     <Customer>
       <Id>${row.id}</Id>
       <Name>${row.name}</Name>
@@ -58,7 +68,9 @@ export default function CustomerListPage() {
         <Code>${row.category?.code ?? ""}</Code>
         <Description>${row.category?.description ?? ""}</Description>
       </Category>
-    </Customer>`).join("");
+    </Customer>`
+      )
+      .join("");
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <Customers>${xmlRows}
@@ -79,25 +91,34 @@ export default function CustomerListPage() {
         Customers
       </Typography>
 
-      <TextField
-        label="Cerca per nome o email"
-        variant="outlined"
-        fullWidth
-        sx={{ mb: 3 }}
-        value={searchText}
-        onChange={(e) => setSearchText(e.target.value)}
-      />
+      <Box sx={{ display: "flex", gap: 2, mb: 3, alignItems: "center" }}>
+        <TextField
+          label="Cerca per nome o email"
+          variant="outlined"
+          fullWidth
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+        />
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={exportXml}
+          
+          sx={{ whiteSpace: "nowrap", height: 56 }}
+        >
+          Esporta XML
+        </Button>
+      </Box>
 
-      <Button
-        variant="contained"
-        color="primary"
-        sx={{ mb: 3 }}
-        onClick={exportXml}
-      >
-        Esporta XML
-      </Button>
+      {!loading && (
+        <Typography variant="body2" sx={{ mb: 1, color: "text.secondary" }}>
+          {list.length === 0
+            ? "Nessun risultato trovato"
+            : `Trovati ${list.length} clienti`}
+        </Typography>
+      )}
 
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} elevation={3}>
         <Table sx={{ minWidth: 650 }} aria-label="customers table">
           <TableHead>
             <TableRow>
@@ -110,23 +131,45 @@ export default function CustomerListPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {list.map((row) => (
-              <TableRow
-                key={row.id}
-                sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-              >
-                <TableCell>{row.name}</TableCell>
-                <TableCell>{row.address}</TableCell>
-                <TableCell>{row.email}</TableCell>
-                <TableCell>{row.phone}</TableCell>
-                <TableCell>{row.iban}</TableCell>
-                <TableCell>
-                  {row.category
-                    ? `${row.category.code} - ${row.category.description}`
-                    : "-"}
-                </TableCell>
-              </TableRow>
-            ))}
+            {loading
+              ? Array.from({ length: 8 }).map((_, index) => (
+                  <TableRow key={index}>
+                    {Array.from({ length: 6 }).map((_, colIndex) => (
+                      <TableCell key={colIndex}>
+                        <Skeleton variant="text" animation="wave" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              : list.length === 0
+              ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 6, color: "text.secondary" }}>
+                      Nessun cliente trovato per "{searchText}"
+                    </TableCell>
+                  </TableRow>
+                )
+              : list.map((row, index) => (
+                  <StyledTableRow key={row.id} isEven={index % 2 === 0}>
+                    <TableCell>{row.name}</TableCell>
+                    <TableCell>{row.address}</TableCell>
+                    <TableCell>{row.email}</TableCell>
+                    <TableCell>{row.phone}</TableCell>
+                    <TableCell>{row.iban}</TableCell>
+                    <TableCell>
+                      {row.category ? (
+                        <Chip
+                          label={`${row.category.code} - ${row.category.description}`}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                        />
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                  </StyledTableRow>
+                ))}
           </TableBody>
         </Table>
       </TableContainer>
@@ -138,5 +181,15 @@ const StyledTableHeadCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
     backgroundColor: theme.palette.primary.light,
     color: theme.palette.common.white,
+    fontWeight: "bold",
   },
+}));
+
+const StyledTableRow = styled(TableRow)<{ isEven: boolean }>(({ theme, isEven }) => ({
+  backgroundColor: isEven ? theme.palette.action.hover : "inherit",
+  "&:hover": {
+    backgroundColor: theme.palette.action.selected,
+    cursor: "pointer",
+  },
+  "&:last-child td, &:last-child th": { border: 0 },
 }));
